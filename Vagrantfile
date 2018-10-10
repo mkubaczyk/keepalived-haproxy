@@ -7,7 +7,7 @@ haproxy -f /etc/haproxy/haproxy.cfg -D
 service keepalived restart
 SCRIPT_HA
 
-$script_web1 = <<-SCRIPT_WEB
+$script_web = <<-SCRIPT_WEB
 set -e
 apt-get update && apt-get install -y nginx
 echo "I'm web $1" > /usr/share/nginx/html/index.html
@@ -15,38 +15,27 @@ service nginx restart
 SCRIPT_WEB
 
 Vagrant.configure("2") do |config|
+
   config.vm.box = "ubuntu/trusty64"
-  config.vm.define :ha1 do |node|
-    node.vm.hostname = "ha1"
-    node.vm.network :private_network, ip: "192.168.33.10"
-    node.vm.synced_folder "ha1", "/etc/keepalived"
-    node.vm.synced_folder "haproxy", "/etc/haproxy.bak"
-    node.vm.provision "shell", inline: $script_ha
-  end
 
-  config.vm.define :ha2 do |node|
-    node.vm.hostname = "ha2"
-    node.vm.network :private_network, ip: "192.168.33.11"
-    node.vm.synced_folder "ha2", "/etc/keepalived"
-    node.vm.synced_folder "haproxy", "/etc/haproxy.bak"
-    node.vm.provision "shell", inline: $script_ha
-  end
-
-  config.vm.define :web1 do |node|
-    node.vm.hostname = "web1"
-    node.vm.network :private_network, ip: "192.168.34.10"
-    node.vm.provision "shell" do |s|
-      s.inline = $script_web1
-      s.args   = "1"
+  (1..2).each do |i|
+    config.vm.define "ha#{i}" do |node|
+      node.vm.hostname = "ha#{i}"
+      node.vm.network :private_network, ip: "192.168.33.1#{i}"
+      node.vm.synced_folder "ha#{i}", "/etc/keepalived"
+      node.vm.synced_folder "haproxy", "/etc/haproxy.bak"
+      node.vm.provision "shell", inline: $script_ha
     end
   end
 
-  config.vm.define :web2 do |node|
-    node.vm.hostname = "web2"
-    node.vm.network :private_network, ip: "192.168.34.11"
-    node.vm.provision "shell" do |s|
-      s.inline = $script_web1
-      s.args   = "2"
+  (1..2).each do |i|
+    config.vm.define "web#{i}" do |node|
+      node.vm.hostname = "web#{i}"
+      node.vm.network :private_network, ip: "192.168.34.1#{i}"
+      node.vm.provision "shell" do |s|
+        s.inline = $script_web
+        s.args   = "#{i}"
+      end
     end
   end
 
