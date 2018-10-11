@@ -2,7 +2,9 @@ $script_ha = <<-SCRIPT_HA
 set -e
 echo 1 > /proc/sys/net/ipv4/ip_nonlocal_bind
 apt-get update && apt-get install -y haproxy keepalived
-cp /etc/haproxy.bak/haproxy.cfg /etc/haproxy/haproxy.cfg
+cp /usr/local/copy/haproxy.cfg /etc/haproxy/haproxy.cfg
+cp /usr/local/copy/haproxy.conf /etc/rsyslog.d/haproxy.conf
+restart rsyslog
 haproxy -f /etc/haproxy/haproxy.cfg -D
 service keepalived restart
 SCRIPT_HA
@@ -22,8 +24,8 @@ Vagrant.configure("2") do |config|
     config.vm.define "ha#{i}" do |node|
       node.vm.hostname = "ha#{i}"
       node.vm.network :private_network, ip: "192.168.33.1#{i}"
-      node.vm.synced_folder "ha#{i}", "/etc/keepalived"
-      node.vm.synced_folder "haproxy", "/etc/haproxy.bak"
+      node.vm.synced_folder "files/ha#{i}", "/etc/keepalived"
+      node.vm.synced_folder "files/copy", "/usr/local/copy"
       node.vm.provision "shell", inline: $script_ha
     end
   end
